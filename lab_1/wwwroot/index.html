@@ -1,0 +1,229 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Лабораторная 1 - Вариант 8</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            max-width: 650px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .config-panel {
+            display: flex;
+            gap: 15px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+            .config-panel label {
+                font-weight: bold;
+                font-size: 14px;
+            }
+            .config-panel select {
+                padding: 5px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+            }
+        .row {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-label {
+            width: 20px;
+            font-weight: bold;
+        }
+        .slider {
+            flex-grow: 1;
+            height: 10px;
+            appearance: none;
+            border-radius: 5px;
+            outline: none;
+            border: 1px solid #ccc;
+        }
+        .number-input {
+            width: 65px;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            text-align: right;
+        }
+        .warning {
+            color: #721c24;
+            font-weight: bold;
+            display: none;
+            padding: 10px;
+            border: 1px solid #f5c6cb;
+            background: #f8d7da;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .preview-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .color-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            border: 2px solid #ccc;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+        .picker-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+            .picker-box input[type="color"] {
+                width: 60px;
+                height: 60px;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                background: none;
+            }
+        .model-block {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+            .model-block h3 {
+                margin-top: 0;
+                margin-bottom: 12px;
+                color: #34495e;
+                border-bottom: 2px solid #ecf0f1;
+                padding-bottom: 5px;
+            }
+    </style>
+</head>
+<body>
+    <h2>Цветовая модель: RGB ↔ XYZ ↔ HSV</h2>
+    <div class="config-panel">
+        <label>
+            Источник света:
+            <select id="illuminant">
+                <option value="D65">D65 (Средний дневной свет)</option>
+                <option value="D50">D50 (Теплый дневной свет)</option>
+                <option value="E">E (Равноэнергетический)</option>
+            </select>
+        </label>
+
+        <label>
+            Выход за границы:
+            <select id="strategy">
+                <option value="clipping">Clipping (Обрезание)</option>
+                <option value="scaling">Scaling (Масштабирование)</option>
+            </select>
+        </label>
+    </div>
+    <div id="warning" class="warning">⚠️ Выход за границы RGB! Применена корректировка цвета.</div>
+    <div class="preview-container">
+        <div>
+            <div style="font-weight: bold; margin-bottom: 5px; text-align: center;">Текущий цвет:</div>
+            <div id="preview" class="color-preview"></div>
+        </div>
+        <div class="picker-box">
+            <span style="font-weight: bold;">Палитра:</span>
+            <input type="color" id="nativePicker" value="#ff0000" title="Нажмите для выбора цвета из графической палитры">
+        </div>
+    </div>
+    <div class="model-block">
+        <h3>RGB</h3>
+        <div class="row"><span class="slider-label">R:</span><input type="range" id="rSlider" min="0" max="255" class="slider"><input type="number" id="rNum" min="0" max="255" class="number-input"></div>
+        <div class="row"><span class="slider-label">G:</span><input type="range" id="gSlider" min="0" max="255" class="slider"><input type="number" id="gNum" min="0" max="255" class="number-input"></div>
+        <div class="row"><span class="slider-label">B:</span><input type="range" id="bSlider" min="0" max="255" class="slider"><input type="number" id="bNum" min="0" max="255" class="number-input"></div>
+    </div>
+    <div class="model-block">
+        <h3>HSV</h3>
+        <div class="row"><span class="slider-label">H:</span><input type="range" id="hSlider" min="0" max="360" class="slider"><input type="number" id="hNum" min="0" max="360" class="number-input"></div>
+        <div class="row"><span class="slider-label">S:</span><input type="range" id="sSlider" min="0" max="100" class="slider"><input type="number" id="sNum" min="0" max="100" class="number-input"></div>
+        <div class="row"><span class="slider-label">V:</span><input type="range" id="vSlider" min="0" max="100" class="slider"><input type="number" id="vNum" min="0" max="100" class="number-input"></div>
+    </div>
+    <div class="model-block">
+        <h3>XYZ</h3>
+        <div class="row"><span class="slider-label">X:</span><input type="range" id="xSlider" min="0" max="120" step="0.01" class="slider"><input type="number" id="xNum" min="0" max="120" step="0.1" class="number-input"></div>
+        <div class="row"><span class="slider-label">Y:</span><input type="range" id="ySlider" min="0" max="120" step="0.01" class="slider"><input type="number" id="yNum" min="0" max="120" step="0.1" class="number-input"></div>
+        <div class="row"><span class="slider-label">Z:</span><input type="range" id="zSlider" min="0" max="120" step="0.01" class="slider"><input type="number" id="zNum" min="0" max="120" step="0.1" class="number-input"></div>
+    </div>
+    <script type="module">
+        import { ColorViewModel } from './ViewModel.js';
+        const vm = new ColorViewModel();
+        function updateSliderGradients(r, g, b) {
+            document.getElementById('rSlider').style.background = `linear-gradient(to right, rgb(0,${g},${b}), rgb(255,${g},${b}))`;
+            document.getElementById('gSlider').style.background = `linear-gradient(to right, rgb(${r},0,${b}), rgb(${r},255,${b}))`;
+            document.getElementById('bSlider').style.background = `linear-gradient(to right, rgb(${r},${g},0), rgb(${r},${g},255))`;
+            document.getElementById('hSlider').style.background = `linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red)`;
+        }
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+        }
+        function rgbToHex(r, g, b) {
+            return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+        }
+        vm.subscribe(() => {
+            const data = vm.getCalculatedValues();
+            const { r, g, b } = data.rgb;
+            document.getElementById('preview').style.backgroundColor = `rgb(${r},${g},${b})`;
+            document.getElementById('nativePicker').value = rgbToHex(r, g, b);
+            document.getElementById('warning').style.display = data.isOutOfRange ? 'block' : 'none';
+            document.getElementById('rSlider').value = r; document.getElementById('rNum').value = r;
+            document.getElementById('gSlider').value = g; document.getElementById('gNum').value = g;
+            document.getElementById('bSlider').value = b; document.getElementById('bNum').value = b;
+            document.getElementById('hSlider').value = data.hsv.h; document.getElementById('hNum').value = data.hsv.h;
+            document.getElementById('sSlider').value = data.hsv.s; document.getElementById('sNum').value = data.hsv.s;
+            document.getElementById('vSlider').value = data.hsv.v; document.getElementById('vNum').value = data.hsv.v;
+            document.getElementById('xSlider').value = data.xyz.x; document.getElementById('xNum').value = data.xyz.x;
+            document.getElementById('ySlider').value = data.xyz.y; document.getElementById('yNum').value = data.xyz.y;
+            document.getElementById('zSlider').value = data.xyz.z; document.getElementById('zNum').value = data.xyz.z;
+
+            updateSliderGradients(r, g, b);
+        });
+        const updateRGB = () => vm.setRGB(+document.getElementById('rNum').value, +document.getElementById('gNum').value, +document.getElementById('bNum').value);
+        ['rSlider', 'gSlider', 'bSlider'].forEach(id => document.getElementById(id).oninput = (e) => {
+            document.getElementById(id[0] + 'Num').value = e.target.value;
+            updateRGB();
+        });
+        ['rNum', 'gNum', 'bNum'].forEach(id => document.getElementById(id).onchange = updateRGB);
+        const updateHSV = () => vm.setHSV(+document.getElementById('hNum').value, +document.getElementById('sNum').value, +document.getElementById('vNum').value);
+        ['hSlider', 'sSlider', 'vSlider'].forEach(id => document.getElementById(id).oninput = (e) => {
+            document.getElementById(id[0] + 'Num').value = e.target.value;
+            updateHSV();
+        });
+        ['hNum', 'sNum', 'vNum'].forEach(id => document.getElementById(id).onchange = updateHSV);
+        const updateXYZ = () => vm.setXYZ(+document.getElementById('xNum').value, +document.getElementById('yNum').value, +document.getElementById('zNum').value);
+        ['xSlider', 'ySlider', 'zSlider'].forEach(id => document.getElementById(id).oninput = (e) => {
+            document.getElementById(id[0] + 'Num').value = e.target.value;
+            updateXYZ();
+        });
+        ['xNum', 'yNum', 'zNum'].forEach(id => document.getElementById(id).onchange = updateXYZ);
+        document.getElementById('nativePicker').oninput = (e) => {
+            const rgb = hexToRgb(e.target.value);
+            if (rgb) vm.setRGB(rgb.r, rgb.g, rgb.b);
+        };
+        document.getElementById('illuminant').onchange = (e) => { vm.illuminant = e.target.value; vm.notify(); };
+        document.getElementById('strategy').onchange = (e) => { vm.strategy = e.target.value; vm.notify(); };
+        vm.notify();
+    </script>
+</body>
+</html>
