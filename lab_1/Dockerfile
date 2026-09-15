@@ -1,6 +1,6 @@
 FROM ://microsoft.com AS build
 WORKDIR /src
-COPY ["ColorApp.csproj", "./"]
+COPY ["ColorConverterLab.csproj", "./"]
 RUN dotnet restore "ColorConverterLab.csproj"
 COPY . .
 RUN dotnet publish "ColorConverterLab.csproj" -c Release -o /app/publish /p:UseAppHost=false
@@ -9,4 +9,4 @@ WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "ColorApp.dll"]
+ENTRYPOINT ["dotnet", "ColorConverterLab.dll"]
