@@ -1,1 +1,1 @@
-https://cheerful-quokka-d42844.netlify.app/  - лаб 1
+https://aquamarine-monstera-130704.netlify.app/  - лаб 1
