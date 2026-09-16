@@ -109,3 +109,13 @@ export function xyzToRgb(x, y, z, illuminant = 'D65', outOfRangeStrategy = 'clip
     }
     return { r: Math.round(r), g: Math.round(g), b: Math.round(b), isOutOfRange };
 }
+export function runTests() {
+    console.log("Запуск тестов математики...");
+    const hsv = rgbToHsv(255, 0, 0);
+    console.assert(hsv.h === 0 && hsv.s === 100 && hsv.v === 100, "Ошибка в rgbToHsv для красного!", hsv);
+    const xyz = rgbToXyz(255, 0, 0, 'D65');
+    console.assert(Math.abs(xyz.x - 41.24) < 0.1, "Ошибка в X для RGB(255, 0, 0)", xyz);
+    const rgb = hsvToRgb(0, 100, 100);
+    console.assert(rgb.r === 255 && rgb.g === 0 && rgb.b === 0, "Ошибка в hsvToRgb!", rgb);
+    console.log("Все микро-тесты успешно пройдены! ✅");
+}
