@@ -117,5 +117,5 @@ export function runTests() {
     console.assert(Math.abs(xyz.x - 41.24) < 0.1, "Ошибка в X для RGB(255, 0, 0)", xyz);
     const rgb = hsvToRgb(0, 100, 100);
     console.assert(rgb.r === 255 && rgb.g === 0 && rgb.b === 0, "Ошибка в hsvToRgb!", rgb);
-    console.log("Все микро-тесты успешно пройдены! ✅");
+    console.log("Все микро-тесты успешно пройдены!");
 }
