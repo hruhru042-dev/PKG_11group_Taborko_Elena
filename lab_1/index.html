@@ -183,23 +183,26 @@
         function rgbToHex(r, g, b) {
             return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
         }
-        vm.subscribe(() => {
-            const data = vm.getCalculatedValues();
-            const { r, g, b } = data.rgb;
-            document.getElementById('preview').style.backgroundColor = `rgb(${r},${g},${b})`;
-            document.getElementById('nativePicker').value = rgbToHex(r, g, b);
-            document.getElementById('warning').style.display = data.isOutOfRange ? 'block' : 'none';
-            document.getElementById('rSlider').value = r; document.getElementById('rNum').value = r;
-            document.getElementById('gSlider').value = g; document.getElementById('gNum').value = g;
-            document.getElementById('bSlider').value = b; document.getElementById('bNum').value = b;
-            document.getElementById('hSlider').value = data.hsv.h; document.getElementById('hNum').value = data.hsv.h;
-            document.getElementById('sSlider').value = data.hsv.s; document.getElementById('sNum').value = data.hsv.s;
-            document.getElementById('vSlider').value = data.hsv.v; document.getElementById('vNum').value = data.hsv.v;
-            document.getElementById('xSlider').value = data.xyz.x; document.getElementById('xNum').value = data.xyz.x;
-            document.getElementById('ySlider').value = data.xyz.y; document.getElementById('yNum').value = data.xyz.y;
-            document.getElementById('zSlider').value = data.xyz.z; document.getElementById('zNum').value = data.xyz.z;
-            updateSliderGradients(r, g, b);
-        });
+vm.subscribe(() => {
+    const data = vm.getCalculatedValues();
+    const { r, g, b } = data.rgb;
+    document.getElementById('preview').style.backgroundColor = `rgb(${r},${g},${b})`;
+    document.getElementById('nativePicker').value = rgbToHex(r, g, b);
+    document.getElementById('warning').style.display = data.isOutOfRange ? 'block' : 'none';
+    document.getElementById('rSlider').value = r; document.getElementById('rNum').value = r;
+    document.getElementById('gSlider').value = g; document.getElementById('gNum').value = g;
+    document.getElementById('bSlider').value = b; document.getElementById('bNum').value = b;
+    document.getElementById('hSlider').value = data.hsv.h; document.getElementById('hNum').value = data.hsv.h;
+    document.getElementById('sSlider').value = data.hsv.s; document.getElementById('sNum').value = data.hsv.s;
+    document.getElementById('vSlider').value = data.hsv.v; document.getElementById('vNum').value = data.hsv.v;
+    document.getElementById('xSlider').value = data.xyzDisplay.x;
+    document.getElementById('xNum').value = data.xyzDisplay.x;
+    document.getElementById('ySlider').value = data.xyzDisplay.y;
+    document.getElementById('yNum').value = data.xyzDisplay.y;
+    document.getElementById('zSlider').value = data.xyzDisplay.z;
+    document.getElementById('zNum').value = data.xyzDisplay.z;
+    updateSliderGradients(r, g, b);
+});
         const updateRGB = () => vm.setRGB(+document.getElementById('rNum').value, +document.getElementById('gNum').value, +document.getElementById('bNum').value);
         ['rSlider', 'gSlider', 'bSlider'].forEach(id => document.getElementById(id).oninput = (e) => {
             document.getElementById(id[0] + 'Num').value = e.target.value;

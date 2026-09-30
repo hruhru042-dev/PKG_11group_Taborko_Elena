@@ -29,11 +29,15 @@ export class ColorViewModel {
         const hsv = Model.rgbToHsv(this.rgb.r, this.rgb.g, this.rgb.b);
         const xyz = Model.rgbToXyz(this.rgb.r, this.rgb.g, this.rgb.b, this.illuminant);
         const rgbCheck = Model.xyzToRgb(xyz.x, xyz.y, xyz.z, this.illuminant, this.strategy);
-
         return {
             rgb: this.rgb,
             hsv,
-            xyz: { x: +xyz.x.toFixed(2), y: +xyz.y.toFixed(2), z: +xyz.z.toFixed(2) },
+            xyzDisplay: {
+                x: Math.round(xyz.x),
+                y: Math.round(xyz.y),
+                z: Math.round(xyz.z)
+            },
+            xyz,
             isOutOfRange: rgbCheck.isOutOfRange
         };
     }
