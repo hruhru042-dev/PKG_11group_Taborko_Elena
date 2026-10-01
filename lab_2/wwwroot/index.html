@@ -216,137 +216,144 @@
 
     <script>
 class BinaryStreamReader {
-    constructor(buffer, isLittleEndian = true) {
-        this.view = new DataView(buffer);
-        this.offset = 0;
-        this.isLittleEndian = isLittleEndian;
-    }
+            constructor(buffer, isLittleEndian = true) {
+                this.view = new DataView(buffer);
+                this.offset = 0;
+                this.isLittleEndian = isLittleEndian;
+            }
 
-    readByte() {
-        return this.view.getUint8(this.offset++);
-    }
+            readByte() {
+                return this.view.getUint8(this.offset++);
+            }
 
-    readUInt16(le = this.isLittleEndian) {
-        const val = this.view.getUint16(this.offset, le);
-        this.offset += 2;
-        return val;
-    }
+            readUInt16(le = this.isLittleEndian) {
+                const val = this.view.getUint16(this.offset, le);
+                this.offset += 2;
+                return val;
+            }
 
-    readUInt32(le = this.isLittleEndian) {
-        const val = this.view.getUint32(this.offset, le);
-        this.offset += 4;
-        return val;
-    }
+            readUInt32(le = this.isLittleEndian) {
+                const val = this.view.getUint32(this.offset, le);
+                this.offset += 4;
+                return val;
+            }
 
-    readInt32(le = this.isLittleEndian) {
-        const val = this.view.getInt32(this.offset, le);
-        this.offset += 4;
-        return val;
-    }
+            readInt32(le = this.isLittleEndian) {
+                const val = this.view.getInt32(this.offset, le);
+                this.offset += 4;
+                return val;
+            }
 
-    readString(length) {
-        let str = "";
-        for (let i = 0; i < length; i++) {
-            str += String.fromCharCode(this.readByte());
-        }
-        return str;
-    }
+            readString(length) {
+                let str = "";
+                for (let i = 0; i < length; i++) {
+                    str += String.fromCharCode(this.readByte());
+                }
+                return str;
+            }
 
-    skip(bytes) {
-        this.offset += bytes;
-    }
+            skip(bytes) {
+                this.offset += bytes;
+            }
 }
 
 async function readPartialFile(file, bytesToRead) {
-    const slice = file.slice(0, Math.min(bytesToRead, file.size));
-    return await slice.arrayBuffer();
+            const slice = file.slice(0, Math.min(bytesToRead, file.size));
+            return await slice.arrayBuffer();
 }
 
 async function parseImageFile(file) {
-    const result = {
-        name: file.name,
-        format: "Неизвестен",
-        size: "-",
-        resolution: "-",
-        colorDepth: "-",
-        compression: "-",
-        extra: "-",
-        status: "ОК",
-        isCorrupted: false
-    };
+            const result = {
+                name: file.name,
+                format: "Неизвестен",
+                size: "-",
+                resolution: "-",
+                colorDepth: "-",
+                compression: "-",
+                extra: "-",
+                status: "ОК",
+                isCorrupted: false
+            };
 
-    if (file.size < 8) {
-        result.status = "Файл слишком мал";
-        result.isCorrupted = true;
-        return result;
-    }
+            if (file.size < 8) {
+                result.status = "Файл слишком мал";
+                result.isCorrupted = true;
+                return result;
+            }
 
-    try {
-        const headerBuffer = await readPartialFile(file, 24);
-        const reader = new BinaryStreamReader(headerBuffer, true);
+            try {
+                const headerBuffer = await readPartialFile(file, 24);
+                const reader = new BinaryStreamReader(headerBuffer, true);
 
-        const b0 = reader.readByte();
-        const b1 = reader.readByte();
-        const b2 = reader.readByte();
-        const b3 = reader.readByte();
+                const b0 = reader.readByte();
+                const b1 = reader.readByte();
+                const b2 = reader.readByte();
+                const b3 = reader.readByte();
 
-        if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4E && b3 === 0x47) {
-            await parsePNG(file, result);
-        }
+                if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4E && b3 === 0x47) {
+                    await parsePNG(file, result);
+                } else if (b0 === 0xFF && b1 === 0xD8) {
+                    await parseJPEG(file, result);
+                } else if (b0 === 0x47 && b1 === 0x49 && b2 === 0x46) {
+                    parseGIF(headerBuffer, result);
+                } else if (b0 === 0x42 && b1 === 0x4D) {
+                    await parseBMP(file, result);
+                } else if ((b0 === 0x49 && b1 === 0x49) || (b0 === 0x4D && b1 === 0x4D)) {
+                    await parseTIFF(file, b0 === 0x49, result);
+                } else if (b0 === 0x0A && b1 <= 5) {
+                    await parsePCX(file, result);
+                } else {
+                    result.status = "Подмененное расширение или неизвестный формат";
+                    result.isCorrupted = true;
+                }
+            } catch (e) {
+                result.status = "Ошибка чтения: " + e.message;
+                result.isCorrupted = true;
+            }
 
-        else if (b0 === 0xFF && b1 === 0xD8) {
-            await parseJPEG(file, result);
-        }
-
-        else if (b0 === 0x47 && b1 === 0x49 && b2 === 0x46) {
-            parseGIF(headerBuffer, result);
-        }
-
-        else if (b0 === 0x42 && b1 === 0x4D) {
-            await parseBMP(file, result);
-        }
-
-        else if ((b0 === 0x49 && b1 === 0x49) || (b0 === 0x4D && b1 === 0x4D)) {
-            await parseTIFF(file, b0 === 0x49, result);
-        }
-
-        else if (b0 === 0x0A && b1 <= 5) {
-            await parsePCX(file, result);
-        } else {
-            result.status = "Подмененное расширение или неизвестный формат";
-            result.isCorrupted = true;
-        }
-    } catch (e) {
-        result.status = "Ошибка чтения: " + e.message;
-        result.isCorrupted = true;
-    }
-
-    return result;
+            return result;
 }
 
 async function parsePNG(file, res) {
     res.format = "PNG";
-    const buf = await readPartialFile(file, 64);
+
+    const buf = await readPartialFile(file, Math.min(2048, file.size));
     const reader = new BinaryStreamReader(buf, false);
     reader.skip(8);
 
-    const ihdrLen = reader.readUInt32();
-    const ihdrType = reader.readString(4);
+    let dpiX = 0, dpiY = 0;
 
-    if (ihdrType === "IHDR") {
-        const w = reader.readUInt32();
-        const h = reader.readUInt32();
-        const depth = reader.readByte();
-        const colorType = reader.readByte();
-        const comp = reader.readByte();
+    while (reader.offset < buf.byteLength - 8) {
+        const len = reader.readUInt32();
+        const type = reader.readString(4);
 
-        res.size = `${w} x ${h}`;
-        res.colorDepth = `${depth} бит/канал (тип ${colorType})`;
-        res.compression = comp === 0 ? "Deflate" : `Код ${comp}`;
-    } else {
-        res.status = "Отсутствует IHDR";
-        res.isCorrupted = true;
+        if (type === "IHDR") {
+            const w = reader.readUInt32();
+            const h = reader.readUInt32();
+            const depth = reader.readByte();
+            const colorType = reader.readByte();
+            const comp = reader.readByte();
+
+            res.size = `${w} x ${h}`;
+            res.colorDepth = `${depth} бит/канал (тип ${colorType})`;
+            res.compression = comp === 0 ? "Deflate" : `Код ${comp}`;
+            reader.skip(len - 10);
+        } else if (type === "pHYs") {
+            const ppuX = reader.readUInt32();
+            const ppuY = reader.readUInt32();
+            const unit = reader.readByte();
+            if (unit === 1) { 
+                dpiX = Math.round(ppuX * 0.0254);
+                dpiY = Math.round(ppuY * 0.0254);
+            }
+            reader.skip(len - 9);
+        } else {
+            reader.skip(len);
+        }
+        reader.skip(4); 
     }
+
+    res.resolution = (dpiX > 0 && dpiY > 0) ? `${dpiX} x ${dpiY} DPI` : "Не задано";
 
     const tailSlice = file.slice(Math.max(0, file.size - 12), file.size);
     const tailBuf = await tailSlice.arrayBuffer();
@@ -365,6 +372,7 @@ async function parseJPEG(file, res) {
 
     let foundSOF = false;
     let dqtCount = 0;
+    let dpiX = 0, dpiY = 0;
 
     while (reader.offset < buf.byteLength - 2) {
         const markerStart = reader.readByte();
@@ -376,7 +384,23 @@ async function parseJPEG(file, res) {
         const len = reader.readUInt16();
         const nextPos = reader.offset + len - 2;
 
-        if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7)) {
+        if (marker === 0xE0 && len >= 14) {
+            const identifier = reader.readString(5);
+            if (identifier === "JFIF\0") {
+                reader.skip(2); 
+                const unit = reader.readByte(); 
+                const xRes = reader.readUInt16();
+                const yRes = reader.readUInt16();
+
+                if (unit === 1) {
+                    dpiX = xRes;
+                    dpiY = yRes;
+                } else if (unit === 2) {
+                    dpiX = Math.round(xRes * 2.54);
+                    dpiY = Math.round(yRes * 2.54);
+                }
+            }
+        } else if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7)) {
             foundSOF = true;
             const precision = reader.readByte();
             const h = reader.readUInt16();
@@ -393,6 +417,7 @@ async function parseJPEG(file, res) {
         reader.offset = nextPos;
     }
 
+    res.resolution = (dpiX > 0 && dpiY > 0) ? `${dpiX} x ${dpiY} DPI` : "Не задано";
     res.extra = `Матриц квантования DQT: ${dqtCount}`;
 
     const tailSlice = file.slice(Math.max(0, file.size - 4), file.size);
@@ -408,60 +433,60 @@ async function parseJPEG(file, res) {
 }
 
 function parseGIF(buf, res) {
-    res.format = "GIF";
-    const reader = new BinaryStreamReader(buf, true);
-    reader.skip(3);
-    const ver = reader.readString(3);
-    const w = reader.readUInt16();
-    const h = reader.readUInt16();
-    const packed = reader.readByte();
+            res.format = "GIF";
+            const reader = new BinaryStreamReader(buf, true);
+            reader.skip(3);
+            const ver = reader.readString(3);
+            const w = reader.readUInt16();
+            const h = reader.readUInt16();
+            const packed = reader.readByte();
 
-    const gct = (packed & 0x80) !== 0;
-    const gctSize = 1 << ((packed & 0x07) + 1);
+            const gct = (packed & 0x80) !== 0;
+            const gctSize = 1 << ((packed & 0x07) + 1);
 
-    res.size = `${w} x ${h}`;
-    res.colorDepth = `${((packed >> 4) & 0x07) + 1} бит`;
-    res.compression = "LZW";
-    res.extra = gct ? `Палитра: ${gctSize} цветов (GIF${ver})` : `GIF${ver}`;
+            res.size = `${w} x ${h}`;
+            res.colorDepth = `${((packed >> 4) & 0x07) + 1} бит`;
+            res.compression = "LZW";
+            res.extra = gct ? `Палитра: ${gctSize} цветов (GIF${ver})` : `GIF${ver}`;
 }
 
 async function parseBMP(file, res) {
-    res.format = "BMP";
-    const buf = await readPartialFile(file, 64);
-    const reader = new BinaryStreamReader(buf, true);
-    reader.skip(2);
-    const fileSize = reader.readUInt32();
-    reader.skip(8);
-    const headerSize = reader.readUInt32();
+            res.format = "BMP";
+            const buf = await readPartialFile(file, 64);
+            const reader = new BinaryStreamReader(buf, true);
+            reader.skip(2);
+            const fileSize = reader.readUInt32();
+            reader.skip(8);
+            const headerSize = reader.readUInt32();
 
-    const w = reader.readInt32();
-    const h = reader.readInt32();
-    reader.skip(2);
-    const bpp = reader.readUInt16();
-    const comp = reader.readUInt32();
-    reader.skip(4);
-    const xPels = reader.readInt32();
-    const yPels = reader.readInt32();
+            const w = reader.readInt32();
+            const h = reader.readInt32();
+            reader.skip(2);
+            const bpp = reader.readUInt16();
+            const comp = reader.readUInt32();
+            reader.skip(4);
+            const xPels = reader.readInt32();
+            const yPels = reader.readInt32();
 
-    res.size = `${w} x ${Math.abs(h)}`;
-    res.colorDepth = `${bpp} bpp`;
+            res.size = `${w} x ${Math.abs(h)}`;
+            res.colorDepth = `${bpp} bpp`;
 
-    const dpiX = Math.round(xPels * 0.0254);
-    const dpiY = Math.round(yPels * 0.0254);
-    res.resolution = (dpiX > 0 && dpiY > 0) ? `${dpiX} x ${dpiY} DPI` : "Не задано";
+            const dpiX = Math.round(xPels * 0.0254);
+            const dpiY = Math.round(yPels * 0.0254);
+            res.resolution = (dpiX > 0 && dpiY > 0) ? `${dpiX} x ${dpiY} DPI` : "Не задано";
 
-    const compNames = { 0: "BI_RGB (Без сжатия)", 1: "BI_RLE8", 2: "BI_RLE4", 3: "BI_BITFIELDS" };
-    res.compression = compNames[comp] || `Код ${comp}`;
+            const compNames = { 0: "BI_RGB (Без сжатия)", 1: "BI_RLE8", 2: "BI_RLE4", 3: "BI_BITFIELDS" };
+            res.compression = compNames[comp] || `Код ${comp}`;
 
-    if (file.size < fileSize) {
-        res.status = "Поврежден (размер меньше указанного)";
-        res.isCorrupted = true;
-    }
+            if (file.size < fileSize) {
+                res.status = "Поврежден (размер меньше указанного)";
+                res.isCorrupted = true;
+            }
 }
 
 async function parseTIFF(file, isLittleEndian, res) {
     res.format = "TIFF";
-    const buf = await readPartialFile(file, 1024);
+    const buf = await readPartialFile(file, 2048);
     const reader = new BinaryStreamReader(buf, isLittleEndian);
     reader.skip(2);
     const magic = reader.readUInt16();
@@ -473,9 +498,13 @@ async function parseTIFF(file, isLittleEndian, res) {
 
     const ifdOffset = reader.readUInt32();
     reader.offset = ifdOffset;
+    if (ifdOffset >= buf.byteLength) return;
+
     const entries = reader.readUInt16();
 
     let w = 0, h = 0, bpp = 1, comp = 1;
+    let resUnit = 2; 
+    let xRes = 0, yRes = 0;
 
     for (let i = 0; i < entries; i++) {
         if (reader.offset + 12 > buf.byteLength) break;
@@ -488,109 +517,143 @@ async function parseTIFF(file, isLittleEndian, res) {
         else if (tag === 257) h = val;
         else if (tag === 258) bpp = val;
         else if (tag === 259) comp = val;
+        else if (tag === 296) resUnit = val; 
+        else if (tag === 282) xRes = val;   
+        else if (tag === 283) yRes = val;  
     }
 
     res.size = `${w} x ${h}`;
     res.colorDepth = `${bpp} bpp`;
     res.compression = comp === 1 ? "Без сжатия" : comp === 5 ? "LZW" : comp === 6 ? "JPEG" : `Код ${comp}`;
+
+    let dpiX = xRes;
+    let dpiY = yRes;
+    if (resUnit === 3) { 
+        dpiX = Math.round(xRes * 2.54);
+        dpiY = Math.round(yRes * 2.54);
+    }
+
+    res.resolution = (dpiX > 0 && dpiY > 0) ? `${dpiX} x ${dpiY} DPI` : "Не задано";
 }
 
 async function parsePCX(file, res) {
-    res.format = "PCX";
-    const buf = await readPartialFile(file, 128);
-    const reader = new BinaryStreamReader(buf, true);
-    reader.skip(1);
-    const ver = reader.readByte();
-    const encoding = reader.readByte();
-    const bpp = reader.readByte();
+            res.format = "PCX";
+            const buf = await readPartialFile(file, 128);
+            const reader = new BinaryStreamReader(buf, true);
+            reader.skip(1);
+            const ver = reader.readByte();
+            const encoding = reader.readByte();
+            const bpp = reader.readByte();
 
-    const xMin = reader.readUInt16();
-    const yMin = reader.readUInt16();
-    const xMax = reader.readUInt16();
-    const yMax = reader.readUInt16();
-    const hDpi = reader.readUInt16();
-    const vDpi = reader.readUInt16();
+            const xMin = reader.readUInt16();
+            const yMin = reader.readUInt16();
+            const xMax = reader.readUInt16();
+            const yMax = reader.readUInt16();
+            const hDpi = reader.readUInt16();
+            const vDpi = reader.readUInt16();
 
-    res.size = `${xMax - xMin + 1} x ${yMax - yMin + 1}`;
-    res.resolution = `${hDpi} x ${vDpi} DPI`;
-    res.colorDepth = `${bpp} bpp`;
-    res.compression = encoding === 1 ? "RLE" : "Без сжатия";
+            res.size = `${xMax - xMin + 1} x ${yMax - yMin + 1}`;
+            res.resolution = `${hDpi} x ${vDpi} DPI`;
+            res.colorDepth = `${bpp} bpp`;
+            res.compression = encoding === 1 ? "RLE" : "Без сжатия";
 }
 
 let allData = [];
+const BATCH_SIZE = 50; 
 
 document.getElementById('folderInput').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files).filter(f =>
-        /\.(jpg|jpeg|png|gif|bmp|tif|tiff|pcx)$/i.test(f.name)
-    );
+            const files = Array.from(e.target.files).filter(f =>
+                /\.(jpg|jpeg|png|gif|bmp|tif|tiff|pcx)$/i.test(f.name)
+            );
 
-    if (files.length === 0) {
-        alert("Графические файлы не найдены!");
-        return;
-    }
+            if (files.length === 0) {
+                alert("Графические файлы не найдены!");
+                return;
+            }
 
-    allData = [];
-    const startTime = performance.now();
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    progressContainer.style.display = 'block';
+            allData = [];
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = ''; 
 
-    let processed = 0;
-    let errors = 0;
+            const startTime = performance.now();
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            progressContainer.style.display = 'block';
 
-    for (const file of files) {
-        const item = await parseImageFile(file);
-        if (item.isCorrupted) errors++;
-        allData.push(item);
+            let processed = 0;
+            let errors = 0;
 
-        processed++;
-        if (processed % 10 === 0 || processed === files.length) {
-            progressBar.style.width = `${(processed / files.length) * 100}%`;
-        }
-    }
+            for (let i = 0; i < files.length; i += BATCH_SIZE) {
+                const chunk = files.slice(i, i + BATCH_SIZE);
+                const chunkResults = [];
 
-    const totalTime = Math.round(performance.now() - startTime);
+                for (const file of chunk) {
+                    const item = await parseImageFile(file);
+                    if (item.isCorrupted) errors++;
+                    chunkResults.push(item);
+                    processed++;
+                }
 
-    document.getElementById('statTotal').innerText = files.length;
-    document.getElementById('statSuccess').innerText = files.length - errors;
-    document.getElementById('statErrors').innerText = errors;
-    document.getElementById('statTime').innerText = `${totalTime} мс`;
+                allData.push(...chunkResults);
 
-    progressContainer.style.display = 'none';
-    renderTable(allData);
+                appendRowsToTable(chunkResults);
+
+                progressBar.style.width = `${(processed / files.length) * 100}%`;
+
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            const totalTime = Math.round(performance.now() - startTime);
+
+            document.getElementById('statTotal').innerText = files.length;
+            document.getElementById('statSuccess').innerText = files.length - errors;
+            document.getElementById('statErrors').innerText = errors;
+            document.getElementById('statTime').innerText = `${totalTime} мс`;
+
+            progressContainer.style.display = 'none';
 });
 
 document.getElementById('searchInput').addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    const filtered = allData.filter(d => d.name.toLowerCase().includes(q) || d.format.toLowerCase().includes(q));
-    renderTable(filtered);
+            const q = e.target.value.toLowerCase();
+            const filtered = allData.filter(d => d.name.toLowerCase().includes(q) || d.format.toLowerCase().includes(q));
+            renderTable(filtered);
 });
 
+function appendRowsToTable(dataChunk) {
+            const tbody = document.getElementById('resultTableBody');
+            const fragment = document.createDocumentFragment();
+
+            dataChunk.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.isCorrupted) tr.className = 'corrupted';
+
+                tr.innerHTML = `
+                    <td>${item.name}</td>
+                    <td><b>${item.format}</b></td>
+                    <td>${item.size}</td>
+                    <td>${item.resolution}</td>
+                    <td>${item.colorDepth}</td>
+                    <td>${item.compression}</td>
+                    <td>${item.extra}</td>
+                    <td><span class="badge ${item.isCorrupted ? 'badge-err' : 'badge-ok'}">${item.status}</span></td>
+                `;
+                fragment.appendChild(tr);
+            });
+
+            tbody.appendChild(fragment);
+}
+
 function renderTable(data) {
-    const tbody = document.getElementById('resultTableBody');
-    tbody.innerHTML = '';
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
 
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Нет данных</td></tr>';
-        return;
-    }
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Нет данных</td></tr>';
+                return;
+            }
 
-    data.forEach(item => {
-        const tr = document.createElement('tr');
-        if (item.isCorrupted) tr.className = 'corrupted';
-
-        tr.innerHTML = `
-            <td>${item.name}</td>
-            <td><b>${item.format}</b></td>
-            <td>${item.size}</td>
-            <td>${item.resolution}</td>
-            <td>${item.colorDepth}</td>
-            <td>${item.compression}</td>
-            <td>${item.extra}</td>
-            <td><span class="badge ${item.isCorrupted ? 'badge-err' : 'badge-ok'}">${item.status}</span></td>
-        `;
-        tbody.appendChild(tr);
-    });
+            const displayData = data.slice(0, 500);
+            appendRowsToTable(displayData);
 }
     </script>
 </body>
