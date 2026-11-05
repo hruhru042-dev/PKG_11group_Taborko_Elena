@@ -1,0 +1,532 @@
+﻿<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторная работа №3 — Вариант 19 (Морфологическая обработка)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .checkerboard {
+            background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-900 text-slate-100 flex flex-col">
+
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 p-2.5 rounded-xl shadow-md text-white font-bold text-lg">Lab 3</div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white">Цифровая обработка изображений</h1>
+                <p class="text-xs text-indigo-400 font-medium">Вариант 19: Морфологическая обработка (Группа 10А)</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4 text-sm">
+            <span class="bg-slate-700/80 px-3 py-1 rounded-full text-slate-300 border border-slate-600">Честный пиксельный доступ (ImageData)</span>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <aside class="w-full lg:w-96 bg-slate-800/90 border-r border-slate-700 overflow-y-auto p-6 flex flex-col space-y-6 shrink-0 shadow-xl">
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold tracking-wider text-indigo-400 uppercase">1. База тестовых изображений</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="app.loadPreset('binary_noise')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs font-medium border border-slate-600 transition text-center">Шумные бинарные</button>
+                    <button onclick="app.loadPreset('nonuniform_background')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs font-medium border border-slate-600 transition text-center">Неоднородный фон</button>
+                    <button onclick="app.loadPreset('shapes')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs font-medium border border-slate-600 transition text-center">Геометрия</button>
+                </div>
+                <div class="relative">
+                    <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="app.handleImageUpload(event)">
+                    <label for="imageUpload" class="w-full bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-sm font-medium py-2.5 px-4 rounded-xl cursor-pointer flex items-center justify-center space-x-2 transition shadow-sm">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        <span>Загрузить свое изображение</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Edge Padding Strategy -->
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold tracking-wider text-indigo-400 uppercase">2. Обработка краев (Edge Padding)</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center space-x-2 bg-slate-700/50 p-2.5 rounded-xl border border-slate-600 cursor-pointer hover:bg-slate-700 transition">
+                        <input type="radio" name="edgePadding" value="clamp" checked class="text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm font-medium">Clamp (Дублирование)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 bg-slate-700/50 p-2.5 rounded-xl border border-slate-600 cursor-pointer hover:bg-slate-700 transition">
+                        <input type="radio" name="edgePadding" value="reflect" class="text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-sm font-medium">Reflect (Зеркало)</span>
+                    </label>
+                </div>
+            </section>
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold tracking-wider text-indigo-400 uppercase">3. Морфологическая операция</h2>
+                <select id="morphOperation" class="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-sm font-medium text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="dilation">Дылатация (Dilation)</option>
+                    <option value="erosion">Эрозия (Erosion)</option>
+                    <option value="opening">Открытие (Opening)</option>
+                    <option value="closing">Закрытие (Closing)</option>
+                    <option value="gradient">Морфологический градиент (Dilation - Erosion)</option>
+                    <option value="tophat">Top-Hat (Выделение светлых деталей)</option>
+                    <option value="blackhat">Black-Hat (Выделение темных деталей)</option>
+                </select>
+            </section>
+            <section class="space-y-3">
+                <h2 class="text-sm font-semibold tracking-wider text-indigo-400 uppercase">4. Структурирующий элемент</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <label class="flex items-center justify-center space-x-1 bg-slate-700/50 p-2 rounded-lg border border-slate-600 cursor-pointer hover:bg-slate-700 text-xs font-medium">
+                        <input type="radio" name="seShape" value="square" checked onchange="app.updateKernelPreview()">
+                        <span>Квадрат</span>
+                    </label>
+                    <label class="flex items-center justify-center space-x-1 bg-slate-700/50 p-2 rounded-lg border border-slate-600 cursor-pointer hover:bg-slate-700 text-xs font-medium">
+                        <input type="radio" name="seShape" value="cross" onchange="app.updateKernelPreview()">
+                        <span>Крест</span>
+                    </label>
+                    <label class="flex items-center justify-center space-x-1 bg-slate-700/50 p-2 rounded-lg border border-slate-600 cursor-pointer hover:bg-slate-700 text-xs font-medium">
+                        <input type="radio" name="seShape" value="disk" onchange="app.updateKernelPreview()">
+                        <span>Круг (Диск)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-700/50 p-3 rounded-xl border border-slate-600">
+                    <label class="text-sm font-medium">Размер ядра:</label>
+                    <select id="seSize" onchange="app.updateKernelPreview()" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="3">3 × 3</option>
+                        <option value="5" selected>5 × 5</option>
+                        <option value="7">7 × 7</option>
+                        <option value="9">9 × 9</option>
+                        <option value="11">11 × 11</option>
+                    </select>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 flex flex-col items-center">
+                    <span class="text-xs text-slate-400 mb-2 font-medium">Матрица ядра (1 - элемент, 0 - пусто)</span>
+                    <div id="kernelMatrixContainer" class="grid gap-1"></div>
+                </div>
+            </section>
+            <button onclick="app.processImage()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                <span>Применить обработку</span>
+            </button>
+        </aside>
+        <section class="flex-1 bg-slate-950 p-6 flex flex-col overflow-y-auto">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1 min-h-[500px]">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-xl">
+                    <div class="flex items-center justify-between mb-3 px-2">
+                        <h3 class="font-semibold text-sm text-slate-300 flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                            <span>Исходное изображение</span>
+                        </h3>
+                        <span id="originalInfo" class="text-xs text-slate-500 font-mono">0 × 0 px</span>
+                    </div>
+                    <div class="flex-1 checkerboard rounded-xl flex items-center justify-center overflow-hidden relative min-h-[350px]">
+                        <canvas id="canvasOriginal" class="max-w-full max-h-[500px] object-contain shadow-2xl rounded-lg"></canvas>
+                    </div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-xl">
+                    <div class="flex items-center justify-between mb-3 px-2">
+                        <h3 class="font-semibold text-sm text-slate-300 flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span id="processedTitle">Результат обработки</span>
+                        </h3>
+                        <div class="flex items-center space-x-3">
+                            <span id="processingTime" class="text-xs text-indigo-400 font-mono">Время: 0 мс</span>
+                            <button onclick="app.downloadResult()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                <span>Сохранить</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 checkerboard rounded-xl flex items-center justify-center overflow-hidden relative min-h-[350px]">
+                        <canvas id="canvasProcessed" class="max-w-full max-h-[500px] object-contain shadow-2xl rounded-lg"></canvas>
+                        <div id="loadingOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 opacity-0 pointer-events-none transition-opacity duration-200">
+                            <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="text-sm font-medium text-slate-300">Выполнение покадровой обработки в памяти...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+    <script>
+        class BufferWrapper {
+            constructor(width, height, data = null) {
+                this.width = width;
+                this.height = height;
+                this.data = data ? new Float32Array(data) : new Float32Array(width * height);
+            }
+
+            getPixel(x, y, mode = 'clamp') {
+                let w = this.width;
+                let h = this.height;
+
+                if (x < 0 || x >= w || y < 0 || y >= h) {
+                    if (mode === 'clamp') {
+                        x = Math.max(0, Math.min(x, w - 1));
+                        y = Math.max(0, Math.min(y, h - 1));
+                    } else if (mode === 'reflect') {
+                        if (x < 0) x = -x;
+                        else if (x >= w) x = 2 * w - 2 - x;
+                        if (y < 0) y = -y;
+                        else if (y >= h) y = 2 * h - 2 - y;
+                        x = Math.max(0, Math.min(x, w - 1));
+                        y = Math.max(0, Math.min(y, h - 1));
+                    }
+                }
+                return this.data[y * w + x];
+            }
+
+            setPixel(x, y, val) {
+                if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                    this.data[y * this.width + x] = val;
+                }
+            }
+
+            clone() {
+                let copy = new BufferWrapper(this.width, this.height);
+                copy.data.set(this.data);
+                return copy;
+            }
+        }
+
+        class MorphProcessor {
+            static createStructuringElement(shape, size) {
+                let kernel = [];
+                let radius = Math.floor(size / 2);
+                for (let r = 0; r < size; r++) {
+                    let row = [];
+                    for (let c = 0; c < size; c++) {
+                        let dr = r - radius;
+                        let dc = c - radius;
+                        let val = 0;
+                        if (shape === 'square') {
+                            val = 1;
+                        } else if (shape === 'cross') {
+                            if (dr === 0 || dc === 0) val = 1;
+                        } else if (shape === 'disk') {
+                            if (Math.sqrt(dr * dr + dc * dc) <= radius + 0.5) val = 1;
+                        }
+                        row.push(val);
+                    }
+                    kernel.push(row);
+                }
+                return kernel;
+            }
+
+            static erosion(buffer, kernel, edgeMode) {
+                let w = buffer.width;
+                let h = buffer.height;
+                let result = new BufferWrapper(w, h);
+                let kSize = kernel.length;
+                let radius = Math.floor(kSize / 2);
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let minVal = 255;
+                        for (let kr = 0; kr < kSize; kr++) {
+                            for (let kc = 0; kc < kSize; kc++) {
+                                if (kernel[kr][kc] === 1) {
+                                    let px = buffer.getPixel(x + kc - radius, y + kr - radius, edgeMode);
+                                    if (px < minVal) minVal = px;
+                                }
+                            }
+                        }
+                        result.setPixel(x, y, minVal);
+                    }
+                }
+                return result;
+            }
+
+            static dilation(buffer, kernel, edgeMode) {
+                let w = buffer.width;
+                let h = buffer.height;
+                let result = new BufferWrapper(w, h);
+                let kSize = kernel.length;
+                let radius = Math.floor(kSize / 2);
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let maxVal = 0;
+                        for (let kr = 0; kr < kSize; kr++) {
+                            for (let kc = 0; kc < kSize; kc++) {
+                                if (kernel[kr][kc] === 1) {
+                                    let px = buffer.getPixel(x + kc - radius, y + kr - radius, edgeMode);
+                                    if (px > maxVal) maxVal = px;
+                                }
+                            }
+                        }
+                        result.setPixel(x, y, maxVal);
+                    }
+                }
+                return result;
+            }
+
+            static opening(buffer, kernel, edgeMode) {
+                let eroded = MorphProcessor.erosion(buffer, kernel, edgeMode);
+                return MorphProcessor.dilation(eroded, kernel, edgeMode);
+            }
+
+            static closing(buffer, kernel, edgeMode) {
+                let dilated = MorphProcessor.dilation(buffer, kernel, edgeMode);
+                return MorphProcessor.erosion(dilated, kernel, edgeMode);
+            }
+
+            static gradient(buffer, kernel, edgeMode) {
+                let dilated = MorphProcessor.dilation(buffer, kernel, edgeMode);
+                let eroded = MorphProcessor.erosion(buffer, kernel, edgeMode);
+                let w = buffer.width;
+                let h = buffer.height;
+                let res = new BufferWrapper(w, h);
+                for (let i = 0; i < dilated.data.length; i++) {
+                    res.data[i] = Math.max(0, Math.min(255, dilated.data[i] - eroded.data[i]));
+                }
+                return res;
+            }
+
+            static tophat(buffer, kernel, edgeMode) {
+                let opened = MorphProcessor.opening(buffer, kernel, edgeMode);
+                let w = buffer.width;
+                let h = buffer.height;
+                let res = new BufferWrapper(w, h);
+                for (let i = 0; i < buffer.data.length; i++) {
+                    res.data[i] = Math.max(0, Math.min(255, buffer.data[i] - opened.data[i]));
+                }
+                return res;
+            }
+
+            static blackhat(buffer, kernel, edgeMode) {
+                let closed = MorphProcessor.closing(buffer, kernel, edgeMode);
+                let w = buffer.width;
+                let h = buffer.height;
+                let res = new BufferWrapper(w, h);
+                for (let i = 0; i < buffer.data.length; i++) {
+                    res.data[i] = Math.max(0, Math.min(255, closed.data[i] - buffer.data[i]));
+                }
+                return res;
+            }
+        }
+
+        class MorphApp {
+            constructor() {
+                this.originalBuffer = null;
+                this.processedBuffer = null;
+                this.imgWidth = 0;
+                this.imgHeight = 0;
+
+                this.initCanvas();
+                this.loadPreset('binary_noise');
+                this.updateKernelPreview();
+            }
+
+            initCanvas() {
+                this.canvasOrig = document.getElementById('canvasOriginal');
+                this.ctxOrig = this.canvasOrig.getContext('2d');
+                this.canvasProc = document.getElementById('canvasProcessed');
+                this.ctxProc = this.canvasProc.getContext('2d');
+            }
+
+            loadPreset(type) {
+                let w = 250;
+                let h = 250;
+                let canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                let ctx = canvas.getContext('2d');
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+
+                if (type === 'binary_noise') {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(40, 40, 70, 70);
+                    ctx.beginPath();
+                    ctx.arc(180, 75, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(100, 160, 90, 50);
+
+                    let imgData = ctx.getImageData(0, 0, w, h);
+                    for (let i = 0; i < imgData.data.length; i += 4) {
+                        let rand = Math.random();
+                        if (rand < 0.03) {
+                            imgData.data[i] = 255; imgData.data[i+1] = 255; imgData.data[i+2] = 255;
+                        } else if (rand > 0.97) {
+                            imgData.data[i] = 0; imgData.data[i+1] = 0; imgData.data[i+2] = 0;
+                        }
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                } else if (type === 'nonuniform_background') {
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < w; x++) {
+                            let val = Math.floor(100 + 80 * Math.sin(x / 40) + 50 * Math.cos(y / 40));
+                            ctx.fillStyle = `rgb(${val},${val},${val})`;
+                            ctx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                    ctx.fillStyle = '#10b981';
+                    for (let i = 0; i < 30; i++) {
+                        let cx = 30 + Math.random() * (w - 60);
+                        let cy = 30 + Math.random() * (h - 60);
+                        ctx.fillRect(cx, cy, 6, 6);
+                    }
+                } else if (type === 'shapes') {
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.moveTo(125, 30);
+                    ctx.lineTo(220, 200);
+                    ctx.lineTo(30, 200);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillRect(122, 100, 6, 80);
+                }
+
+                let img = new Image();
+                img.onload = () => {
+                    this.setImage(img);
+                };
+                img.src = canvas.toDataURL();
+            }
+
+            handleImageUpload(event) {
+                let file = event.target.files[0];
+                if (!file) return;
+                let reader = new FileReader();
+                reader.onload = (e) => {
+                    let img = new Image();
+                    img.onload = () => {
+                        this.setImage(img);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            setImage(img) {
+                this.imgWidth = img.width;
+                this.imgHeight = img.height;
+
+                this.canvasOrig.width = this.imgWidth;
+                this.canvasOrig.height = this.imgHeight;
+                this.ctxOrig.drawImage(img, 0, 0);
+
+                this.canvasProc.width = this.imgWidth;
+                this.canvasProc.height = this.imgHeight;
+
+                document.getElementById('originalInfo').innerText = `${this.imgWidth} × ${this.imgHeight} px`;
+
+                let imgData = this.ctxOrig.getImageData(0, 0, this.imgWidth, this.imgHeight);
+                let rawData = new Float32Array(this.imgWidth * this.imgHeight);
+                for (let i = 0; i < rawData.length; i++) {
+                    let r = imgData.data[i * 4];
+                    let g = imgData.data[i * 4 + 1];
+                    let b = imgData.data[i * 4 + 2];
+                    rawData[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+                }
+
+                this.originalBuffer = new BufferWrapper(this.imgWidth, this.imgHeight, rawData);
+                this.processedBuffer = this.originalBuffer.clone();
+                this.renderProcessedToCanvas();
+            }
+
+            updateKernelPreview() {
+                let shape = document.querySelector('input[name="seShape"]:checked').value;
+                let size = parseInt(document.getElementById('seSize').value);
+                let kernel = MorphProcessor.createStructuringElement(shape, size);
+
+                let container = document.getElementById('kernelMatrixContainer');
+                container.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+                container.innerHTML = '';
+
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        let cell = document.createElement('div');
+                        cell.className = `w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${kernel[r][c] === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-500'}`;
+                        cell.innerText = kernel[r][c];
+                        container.appendChild(cell);
+                    }
+                }
+            }
+
+            processImage() {
+                if (!this.originalBuffer) return;
+
+                let overlay = document.getElementById('loadingOverlay');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+
+                setTimeout(() => {
+                    let op = document.getElementById('morphOperation').value;
+                    let edgeMode = document.querySelector('input[name="edgePadding"]:checked').value;
+                    let shape = document.querySelector('input[name="seShape"]:checked').value;
+                    let size = parseInt(document.getElementById('seSize').value);
+                    let kernel = MorphProcessor.createStructuringElement(shape, size);
+
+                    let startTime = performance.now();
+
+                    switch (op) {
+                        case 'dilation':
+                            this.processedBuffer = MorphProcessor.dilation(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'erosion':
+                            this.processedBuffer = MorphProcessor.erosion(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'opening':
+                            this.processedBuffer = MorphProcessor.opening(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'closing':
+                            this.processedBuffer = MorphProcessor.closing(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'gradient':
+                            this.processedBuffer = MorphProcessor.gradient(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'tophat':
+                            this.processedBuffer = MorphProcessor.tophat(this.originalBuffer, kernel, edgeMode);
+                            break;
+                        case 'blackhat':
+                            this.processedBuffer = MorphProcessor.blackhat(this.originalBuffer, kernel, edgeMode);
+                            break;
+                    }
+
+                    let endTime = performance.now();
+                    document.getElementById('processingTime').innerText = `Время: ${(endTime - startTime).toFixed(1)} мс`;
+
+                    this.renderProcessedToCanvas();
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                }, 50);
+            }
+
+            renderProcessedToCanvas() {
+                if (!this.processedBuffer) return;
+                let w = this.processedBuffer.width;
+                let h = this.processedBuffer.height;
+                let imgData = this.ctxProc.createImageData(w, h);
+
+                for (let i = 0; i < this.processedBuffer.data.length; i++) {
+                    let val = Math.max(0, Math.min(255, Math.round(this.processedBuffer.data[i])));
+                    imgData.data[i * 4] = val;
+                    imgData.data[i * 4 + 1] = val;
+                    imgData.data[i * 4 + 2] = val;
+                    imgData.data[i * 4 + 3] = 255;
+                }
+                this.ctxProc.putImageData(imgData, 0, 0);
+            }
+
+            downloadResult() {
+                let link = document.createElement('a');
+                link.download = 'morphological_result.png';
+                link.href = this.canvasProc.toDataURL();
+                link.click();
+            }
+        }
+
+        let app;
+        window.onload = () => {
+            app = new MorphApp();
+        };
+    </script>
+</body>
+</html>
